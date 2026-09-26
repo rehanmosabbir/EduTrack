@@ -76,13 +76,17 @@ describe("API auth and isolation", () => {
     expect(res.status).toBe(200);
   });
 
-  it("rejects google sync for unknown email", async () => {
+  it("creates a student account for new Google users", async () => {
     const res = await request(app).post("/api/auth/google-sync").send({
-      email: "unknown@example.com",
-      name: "Unknown",
-      googleId: "google-unknown",
+      email: "newgoogle@example.com",
+      name: "New Google User",
+      googleId: "google-new-user-test",
     });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(res.body.data.user.role).toBe("STUDENT");
+    expect(res.body.data.accessToken).toBeTruthy();
+
+    await prisma.user.delete({ where: { email: "newgoogle@example.com" } });
   });
 
   it("creates score with calculated percentage", async () => {

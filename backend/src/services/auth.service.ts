@@ -38,17 +38,35 @@ export async function syncGoogleUser(input: {
   image?: string | null;
   googleId: string;
 }) {
+  const email = input.email.toLowerCase();
+
   const user = await prisma.user.findFirst({
     where: {
-      OR: [{ email: input.email.toLowerCase() }, { googleId: input.googleId }],
+      OR: [{ email }, { googleId: input.googleId }],
     },
     include: { studentProfile: { select: { id: true } } },
   });
 
+  // First-time Google login: create a student account automatically
   if (!user) {
-    throw Errors.forbidden(
-      "Account not registered. Please contact your teacher/admin to create an account first.",
-    );
+    const created = await prisma.user.create({
+      data: {
+        name: input.name || email.split("@")[0],
+        email,
+        googleId: input.googleId,
+        image: input.image ?? null,
+        role: Role.STUDENT,
+        studentProfile: {
+          create: {
+            studentId: `STU-${Date.now().toString().slice(-8)}`,
+            isActive: true,
+          },
+        },
+      },
+      include: { studentProfile: { select: { id: true } } },
+    });
+
+    return toAuthPayload(created);
   }
 
   const updated = await prisma.user.update({
@@ -57,7 +75,7 @@ export async function syncGoogleUser(input: {
       googleId: input.googleId,
       image: input.image ?? user.image,
       name: input.name || user.name,
-      email: input.email.toLowerCase(),
+      email,
     },
     include: { studentProfile: { select: { id: true } } },
   });

@@ -152,7 +152,8 @@ export const authOptions: NextAuthOptions = {
           const body = (await res.json().catch(() => null)) as {
             error?: { message?: string };
           } | null;
-          const message = body?.error?.message ?? "Account not registered";
+          const message =
+            body?.error?.message ?? "Google sign-in failed";
           return `/login?error=${encodeURIComponent(message)}`;
         }
 
