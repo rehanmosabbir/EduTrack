@@ -16,4 +16,16 @@ const envSchema = z.object({
     .default("development"),
 });
 
-export const env = envSchema.parse(process.env);
+let cached: z.infer<typeof envSchema> | undefined;
+
+function readEnv() {
+  if (!cached) cached = envSchema.parse(process.env);
+  return cached;
+}
+
+export const env = new Proxy({} as z.infer<typeof envSchema>, {
+  get(_target, prop) {
+    const value = readEnv()[prop as keyof z.infer<typeof envSchema>];
+    return value;
+  },
+});
