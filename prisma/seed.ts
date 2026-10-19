@@ -38,15 +38,53 @@ async function main() {
     },
   });
 
-  const math = await prisma.subject.create({
-    data: { name: "Mathematics", description: "Algebra & Geometry" },
-  });
-  const english = await prisma.subject.create({
-    data: { name: "English", description: "Grammar & Writing" },
-  });
-  const physics = await prisma.subject.create({
-    data: { name: "Physics", description: "Mechanics basics" },
-  });
+  const curriculumSubjects = [
+    // Junior (Class 6–8)
+    "Bangla",
+    "English",
+    "Mathematics",
+    "Science",
+    "Bangladesh and Global Studies",
+    "ICT",
+    "Religion and Moral Education",
+    "Physical Education and Health",
+    "Arts and Crafts",
+    // Secondary (Class 9–10 / SSC)
+    "General Mathematics",
+    "Higher Mathematics",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "Accounting",
+    "Business Entrepreneurship",
+    "Finance and Banking",
+    "Civics and Citizenship",
+    "History",
+    "Geography",
+    "Economics",
+    // Higher secondary (Class 11–12 / HSC)
+    "Business Organization and Management",
+    "Finance, Banking and Insurance",
+    "Islamic History and Culture",
+    "Civics and Good Governance",
+    "Logic",
+    "Sociology",
+    "Statistics",
+  ];
+
+  const subjectByName = new Map<string, { id: string }>();
+  for (const name of curriculumSubjects) {
+    const subject = await prisma.subject.create({
+      data: { name, description: "Bangladeshi NCTB curriculum" },
+    });
+    subjectByName.set(name, subject);
+  }
+
+  const english = subjectByName.get("English")!;
+  const physics = subjectByName.get("Physics")!;
+  const higherMath = subjectByName.get("Higher Mathematics")!;
+  const generalMath = subjectByName.get("General Mathematics")!;
+  const chemistry = subjectByName.get("Chemistry")!;
 
   const studentsData = [
     {
@@ -55,6 +93,7 @@ async function main() {
       studentCode: "STU-001",
       className: "HSC",
       schoolName: "XYZ College",
+      subjectNames: ["English", "Higher Mathematics", "Physics", "Chemistry"],
     },
     {
       fullName: "Karim Hossain",
@@ -62,6 +101,7 @@ async function main() {
       studentCode: "STU-002",
       className: "HSC",
       schoolName: "ABC College",
+      subjectNames: ["English", "Higher Mathematics", "Physics"],
     },
     {
       fullName: "Sadia Islam",
@@ -69,6 +109,7 @@ async function main() {
       studentCode: "STU-003",
       className: "SSC",
       schoolName: "City School",
+      subjectNames: ["English", "General Mathematics", "Physics", "Chemistry"],
     },
   ];
 
@@ -91,11 +132,9 @@ async function main() {
         schoolName: s.schoolName,
         enrollmentDate: subDays(new Date(), 60),
         subjects: {
-          create: [
-            { subjectId: math.id },
-            { subjectId: english.id },
-            { subjectId: physics.id },
-          ],
+          create: s.subjectNames.map((name) => ({
+            subjectId: subjectByName.get(name)!.id,
+          })),
         },
       },
     });
@@ -126,7 +165,7 @@ async function main() {
   const hw1 = await prisma.homeworkAssignment.create({
     data: {
       studentId: students[0].id,
-      subjectId: math.id,
+      subjectId: higherMath.id,
       title: "Algebra practice set A",
       lessonOrChapter: "Algebra",
       instructions: "Complete exercises 1–10 from the worksheet.",
@@ -154,7 +193,7 @@ async function main() {
   await prisma.homeworkAssignment.create({
     data: {
       studentId: students[1].id,
-      subjectId: math.id,
+      subjectId: higherMath.id,
       title: "Different algebra set",
       lessonOrChapter: "Algebra",
       instructions: "Karim-only assignment: word problems 1–5.",
@@ -167,7 +206,7 @@ async function main() {
     data: [
       {
         studentId: students[0].id,
-        subjectId: math.id,
+        subjectId: higherMath.id,
         homeworkAssignmentId: hw1.id,
         evaluationDate: new Date(),
         lessonOrChapter: "Algebra",
@@ -193,9 +232,9 @@ async function main() {
       },
       {
         studentId: students[0].id,
-        subjectId: math.id,
+        subjectId: physics.id,
         evaluationDate: subDays(new Date(), 1),
-        lessonOrChapter: "Geometry",
+        lessonOrChapter: "Mechanics",
         preparationStatus: PreparationStatus.PREPARED,
         homeworkStatus: HomeworkCompletionStatus.COMPLETED,
         marksObtained: 9,
@@ -205,7 +244,7 @@ async function main() {
       },
       {
         studentId: students[1].id,
-        subjectId: math.id,
+        subjectId: higherMath.id,
         evaluationDate: new Date(),
         lessonOrChapter: "Algebra",
         preparationStatus: PreparationStatus.NOT_PREPARED,
@@ -213,6 +252,30 @@ async function main() {
         marksObtained: null,
         maximumMarks: null,
         teacherFeedback: "Please prepare the lesson next time.",
+        evaluatedByTeacherId: teacher.id,
+      },
+      {
+        studentId: students[2].id,
+        subjectId: generalMath.id,
+        evaluationDate: new Date(),
+        lessonOrChapter: "Algebra",
+        preparationStatus: PreparationStatus.PREPARED,
+        homeworkStatus: HomeworkCompletionStatus.COMPLETED,
+        marksObtained: 8,
+        maximumMarks: 10,
+        teacherFeedback: "Solid SSC prep work.",
+        evaluatedByTeacherId: teacher.id,
+      },
+      {
+        studentId: students[2].id,
+        subjectId: chemistry.id,
+        evaluationDate: subDays(new Date(), 1),
+        lessonOrChapter: "Acids and bases",
+        preparationStatus: PreparationStatus.PARTIALLY_PREPARED,
+        homeworkStatus: HomeworkCompletionStatus.PARTIALLY_COMPLETED,
+        marksObtained: 6,
+        maximumMarks: 10,
+        teacherFeedback: "Review titration steps.",
         evaluatedByTeacherId: teacher.id,
       },
     ],

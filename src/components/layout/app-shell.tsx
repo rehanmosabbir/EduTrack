@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -21,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/uiStore";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const teacherNav = [
   { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -64,6 +66,7 @@ export function AppShell({
   const pathname = usePathname();
   const { data: session } = useSession();
   const { sidebarOpen, setSidebarOpen, toggleSidebar } = useUiStore();
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const nav =
     variant === "teacher"
       ? teacherNav
@@ -150,7 +153,7 @@ export function AppShell({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => setSignOutOpen(true)}
               >
                 <LogOut className="h-4 w-4" />
                 Sign out
@@ -160,6 +163,15 @@ export function AppShell({
           <main className="flex-1 p-4 md:p-6">{children}</main>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={signOutOpen}
+        onOpenChange={setSignOutOpen}
+        title="Sign out"
+        description="Are you sure you want to sign out?"
+        confirmLabel="Sign out"
+        onConfirm={() => signOut({ callbackUrl: "/login" })}
+      />
     </div>
   );
 }

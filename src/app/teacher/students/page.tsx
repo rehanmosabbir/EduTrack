@@ -11,33 +11,100 @@ import {
   useStudents,
   useSubjects,
 } from "@/hooks/use-server-state";
+import { createSubject } from "@/services/api";
+import { getErrorMessage } from "@/lib/api";
 import { todayISO } from "@/lib/format";
+import {
+  CLASS_OPTIONS,
+  DEFAULT_CLASS,
+  getSubjectsForClass,
+} from "@/lib/curriculum";
+import { toast } from "sonner";
+
+const emptyForm = () => ({
+  fullName: "",
+  className: DEFAULT_CLASS as string,
+  schoolName: "",
+  email: "",
+  password: "Student@123",
+  enrollmentDate: todayISO(),
+  subjectNames: [] as string[],
+});
 
 export default function TeacherStudentsPage() {
   const [search, setSearch] = useState("");
   const { data, isLoading } = useStudents({ search: search || undefined });
-  const { data: subjects } = useSubjects();
+  const { data: subjects, refetch: refetchSubjects } = useSubjects();
   const create = useCreateStudent();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    fullName: "",
-    className: "HSC",
-    schoolName: "",
-    email: "",
-    password: "Student@123",
-    enrollmentDate: todayISO(),
-    subjectIds: [] as string[],
-  });
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+
+  const curriculumSubjects = getSubjectsForClass(form.className);
+
+  function setClassName(className: string) {
+    const allowed = new Set(
+      getSubjectsForClass(className).map((n) => n.toLowerCase()),
+    );
+    setForm({
+      ...form,
+      className,
+      subjectNames: form.subjectNames.filter((n) =>
+        allowed.has(n.toLowerCase()),
+      ),
+    });
+  }
+
+  async function resolveSubjectIds(names: string[]) {
+    const existing = subjects ?? [];
+    const ids: string[] = [];
+    let createdAny = false;
+
+    for (const name of names) {
+      const found = existing.find(
+        (s) => s.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (found) {
+        ids.push(found.id);
+        continue;
+      }
+      const created = await createSubject({
+        name,
+        description: `Bangladeshi NCTB curriculum`,
+      });
+      ids.push(created.id);
+      createdAny = true;
+    }
+
+    if (createdAny) await refetchSubjects();
+    return ids;
+  }
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    await create.mutateAsync({
-      ...form,
-      schoolName: form.schoolName || null,
-      email: form.email || undefined,
-      password: form.email ? form.password : undefined,
-    });
-    setOpen(false);
+    setSaving(true);
+    try {
+      let subjectIds: string[];
+      try {
+        subjectIds = await resolveSubjectIds(form.subjectNames);
+      } catch (err) {
+        toast.error(getErrorMessage(err));
+        return;
+      }
+      await create.mutateAsync({
+        fullName: form.fullName,
+        className: form.className,
+        schoolName: form.schoolName || null,
+        enrollmentDate: form.enrollmentDate,
+        email: form.email || undefined,
+        password: form.email ? form.password : undefined,
+        subjectIds,
+      });
+      setOpen(false);
+      setForm(emptyForm());
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -66,12 +133,20 @@ export default function TeacherStudentsPage() {
             />
           </div>
           <div>
-            <Label>Class</Label>
-            <Input
+            <Label htmlFor="className">Class</Label>
+            <select
+              id="className"
               required
               value={form.className}
-              onChange={(e) => setForm({ ...form, className: e.target.value })}
-            />
+              onChange={(e) => setClassName(e.target.value)}
+              className="flex h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            >
+              {CLASS_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <Label>School</Label>
@@ -107,32 +182,37 @@ export default function TeacherStudentsPage() {
             />
           </div>
           <div className="md:col-span-2">
-            <Label>Subjects</Label>
+            <Label>
+              Subjects (Bangladeshi curriculum — {form.className})
+            </Label>
             <div className="mt-2 flex flex-wrap gap-3">
-              {(subjects ?? []).map((s) => {
-                const checked = form.subjectIds.includes(s.id);
+              {curriculumSubjects.map((name) => {
+                const checked = form.subjectNames.includes(name);
                 return (
-                  <label key={s.id} className="flex items-center gap-2 text-sm">
+                  <label
+                    key={name}
+                    className="flex cursor-pointer items-center gap-2 text-sm"
+                  >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() =>
                         setForm({
                           ...form,
-                          subjectIds: checked
-                            ? form.subjectIds.filter((id) => id !== s.id)
-                            : [...form.subjectIds, s.id],
+                          subjectNames: checked
+                            ? form.subjectNames.filter((n) => n !== name)
+                            : [...form.subjectNames, name],
                         })
                       }
                     />
-                    {s.name}
+                    {name}
                   </label>
                 );
               })}
             </div>
           </div>
           <div className="md:col-span-2">
-            <Button type="submit" disabled={create.isPending}>
+            <Button type="submit" disabled={saving || create.isPending}>
               Save student
             </Button>
           </div>
