@@ -31,6 +31,7 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     role?: Role;
     userId?: string;
+    name?: string | null;
     studentId?: string | null;
     guardianId?: string | null;
   }
@@ -74,19 +75,24 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login", error: "/login" },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.accessToken = user.accessToken;
         token.role = user.role;
         token.userId = user.id;
+        token.name = user.name;
         token.studentId = user.studentId;
         token.guardianId = user.guardianId;
+      }
+      if (trigger === "update" && session?.name) {
+        token.name = session.name as string;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.userId ?? "";
+        session.user.name = token.name ?? session.user.name;
         session.user.role = (token.role as Role) ?? "STUDENT";
         session.user.studentId = token.studentId;
         session.user.guardianId = token.guardianId;

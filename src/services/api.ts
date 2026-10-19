@@ -159,3 +159,66 @@ export async function createComment(payload: Record<string, unknown>) {
   );
   return data.data;
 }
+
+export interface NotificationPreferences {
+  id: string;
+  userId: string;
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
+  homeworkAssigned: boolean;
+  homeworkDueSoon: boolean;
+  evaluationRecorded: boolean;
+  guardianComment: boolean;
+  teacherReply: boolean;
+}
+
+export async function fetchMe() {
+  const { data } = await api.get<
+    ApiSuccess<{
+      id: string;
+      name: string;
+      email: string;
+      image?: string | null;
+      role: string;
+    }>
+  >("/auth/me");
+  return data.data;
+}
+
+export async function updateProfile(payload: { name: string }) {
+  const { data } = await api.put<
+    ApiSuccess<{ id: string; name: string; email: string }>
+  >("/auth/me", payload);
+  return data.data;
+}
+
+export async function changePassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  const { data } = await api.post<ApiSuccess<{ ok: boolean }>>(
+    "/auth/password",
+    payload,
+  );
+  return data.data;
+}
+
+export async function fetchNotificationPreferences() {
+  const { data } = await api.get<ApiSuccess<NotificationPreferences>>(
+    "/notifications/preferences",
+  );
+  return data.data;
+}
+
+export async function updateNotificationPreferences(
+  payload: Partial<
+    Omit<NotificationPreferences, "id" | "userId">
+  >,
+) {
+  const { data } = await api.put<ApiSuccess<NotificationPreferences>>(
+    "/notifications/preferences",
+    payload,
+  );
+  return data.data;
+}

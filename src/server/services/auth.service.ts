@@ -90,3 +90,42 @@ export async function getMe(userId: string) {
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
 }
+
+export async function updateProfile(
+  userId: string,
+  input: { name: string },
+) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { name: input.name.trim() },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      role: true,
+      status: true,
+    },
+  });
+  return user;
+}
+
+export async function changePassword(
+  userId: string,
+  input: { currentPassword: string; newPassword: string },
+) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.passwordHash) {
+    throw Errors.badRequest("Password change is not available for this account");
+  }
+
+  const ok = await bcrypt.compare(input.currentPassword, user.passwordHash);
+  if (!ok) throw Errors.unauthorized("Current password is incorrect");
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(input.newPassword) },
+  });
+
+  return { ok: true };
+}

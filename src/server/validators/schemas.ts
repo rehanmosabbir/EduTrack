@@ -152,3 +152,28 @@ export const historyQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
+
+export const updateProfileSchema = z.object({
+  name: z.string().min(2).max(100),
+});
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(8).max(72),
+    confirmPassword: z.string().min(8).max(72),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const updateNotificationPrefsSchema = z.object({
+  inAppEnabled: z.boolean().optional(),
+  emailEnabled: z.boolean().optional(),
+  homeworkAssigned: z.boolean().optional(),
+  homeworkDueSoon: z.boolean().optional(),
+  evaluationRecorded: z.boolean().optional(),
+  guardianComment: z.boolean().optional(),
+  teacherReply: z.boolean().optional(),
+});

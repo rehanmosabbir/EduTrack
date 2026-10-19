@@ -215,3 +215,49 @@ export function useCreateComment() {
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
+
+export function useMe() {
+  return useQuery({
+    queryKey: ["me"],
+    queryFn: api.fetchMe,
+  });
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.updateProfile,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["me"] });
+      toast.success("Profile updated");
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: api.changePassword,
+    onSuccess: () => toast.success("Password changed"),
+    onError: (e) => toast.error(getErrorMessage(e)),
+  });
+}
+
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: ["notification-preferences"],
+    queryFn: api.fetchNotificationPreferences,
+  });
+}
+
+export function useUpdateNotificationPreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: api.updateNotificationPreferences,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["notification-preferences"] });
+      toast.success("Notification preferences saved");
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
+  });
+}
