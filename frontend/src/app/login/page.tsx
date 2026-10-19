@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
@@ -49,27 +48,20 @@ function LoginContent() {
 
   const displayError =
     error ||
-    (errorParam
-      ? errorParam === "AccessDenied" ||
-        errorParam === "OAuthCallback" ||
-        errorParam === "OAuthSignin"
-        ? "Google sign-in failed. Use email/password, or add Google Client ID/Secret in .env.local."
-        : decodeURIComponent(errorParam)
-      : null);
+    (errorParam ? decodeURIComponent(errorParam) : null);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-4">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.12),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.1),transparent_40%)]" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-teal-50 via-white to-sky-50 px-4">
       <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white/90 p-8 shadow-lg backdrop-blur">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-700 text-white shadow-md">
             <GraduationCap className="h-7 w-7" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             EduTrack
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Sign in with email or Google
+            Coaching student management — sign in with your account
           </p>
         </div>
 
@@ -89,7 +81,7 @@ function LoginContent() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="teacher@edutrack.local"
             />
           </div>
           <div className="space-y-1.5">
@@ -109,27 +101,9 @@ function LoginContent() {
           </Button>
         </form>
 
-        <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
-          <div className="h-px flex-1 bg-slate-200" />
-          OR
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
-
-        <Button
-          className="w-full"
-          size="lg"
-          variant="outline"
-          type="button"
-          onClick={() => signIn("google", { callbackUrl: "/" })}
-        >
-          Continue with Google
-        </Button>
-
-        <p className="mt-6 text-center text-sm text-slate-500">
-          New student?{" "}
-          <Link href="/register" className="font-medium text-indigo-600 hover:underline">
-            Create an account
-          </Link>
+        <p className="mt-6 text-center text-xs text-slate-500">
+          Accounts are created by the teacher. Demo: teacher@edutrack.local /
+          Teacher@123
         </p>
       </div>
     </div>

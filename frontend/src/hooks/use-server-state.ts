@@ -1,323 +1,217 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseQueryOptions,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as api from "@/services/api";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/api";
-import { queryKeys } from "@/lib/query-keys";
-import * as api from "@/services/api";
 
-type ListParams = Record<string, unknown> | undefined;
-
-function onMutError(error: unknown) {
-  toast.error(getErrorMessage(error));
-}
-
-/* ─── Dashboards ─────────────────────────────────────────── */
-
-export function useAdminDashboard(
-  options?: Partial<UseQueryOptions<Record<string, unknown>>>,
-) {
+export function useTeacherDashboard() {
   return useQuery({
-    queryKey: queryKeys.adminDashboard,
-    queryFn: api.fetchAdminDashboard,
-    ...options,
+    queryKey: ["dashboard", "teacher"],
+    queryFn: api.fetchTeacherDashboard,
   });
 }
 
 export function useStudentDashboard(studentId?: string) {
   return useQuery({
-    queryKey: queryKeys.studentDashboard(studentId),
+    queryKey: ["dashboard", "student", studentId],
     queryFn: () => api.fetchStudentDashboard(studentId),
   });
 }
 
-/* ─── Students ───────────────────────────────────────────── */
-
-export function useStudents(params?: ListParams) {
+export function useGuardianDashboard(studentId?: string) {
   return useQuery({
-    queryKey: queryKeys.students(params),
+    queryKey: ["dashboard", "guardian", studentId],
+    queryFn: () => api.fetchGuardianDashboard(studentId),
+  });
+}
+
+export function useStudents(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ["students", params],
     queryFn: () => api.fetchStudents(params),
   });
 }
 
 export function useStudent(id: string) {
   return useQuery({
-    queryKey: queryKeys.student(id),
+    queryKey: ["student", id],
     queryFn: () => api.fetchStudent(id),
     enabled: !!id,
   });
 }
 
-export function useMyProfile() {
+export function useSubjects() {
   return useQuery({
-    queryKey: queryKeys.myProfile,
-    queryFn: api.fetchMyProfile,
+    queryKey: ["subjects"],
+    queryFn: api.fetchSubjects,
   });
+}
+
+export function useGuardians(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ["guardians", params],
+    queryFn: () => api.fetchGuardians(params),
+  });
+}
+
+export function useHomework(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ["homework", params],
+    queryFn: () => api.fetchHomework(params),
+  });
+}
+
+export function useEvaluations(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ["evaluations", params],
+    queryFn: () => api.fetchEvaluations(params),
+  });
+}
+
+export function useHistory(params: Record<string, unknown>, enabled = true) {
+  return useQuery({
+    queryKey: ["history", params],
+    queryFn: () => api.fetchHistory(params),
+    enabled,
+  });
+}
+
+export function useProgress(params: Record<string, unknown>, enabled = true) {
+  return useQuery({
+    queryKey: ["progress", params],
+    queryFn: () => api.fetchProgress(params),
+    enabled,
+  });
+}
+
+export function useComments(params: Record<string, unknown>, enabled = true) {
+  return useQuery({
+    queryKey: ["comments", params],
+    queryFn: () => api.fetchComments(params),
+    enabled,
+  });
+}
+
+export function useUnansweredComments() {
+  return useQuery({
+    queryKey: ["comments", "unanswered"],
+    queryFn: api.fetchUnansweredComments,
+  });
+}
+
+function useInvalidate() {
+  const qc = useQueryClient();
+  return () =>
+    qc.invalidateQueries().catch(() => undefined);
 }
 
 export function useCreateStudent() {
-  const qc = useQueryClient();
+  const invalidate = useInvalidate();
   return useMutation({
     mutationFn: api.createStudent,
-    onSuccess: () => {
-      toast.success("Student created successfully.");
-      void qc.invalidateQueries({ queryKey: ["students"] });
-      void qc.invalidateQueries({ queryKey: queryKeys.adminDashboard });
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Student created");
     },
-    onError: onMutError,
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
 
-export function useDeleteStudent() {
-  const qc = useQueryClient();
+export function useUpdateStudent() {
+  const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: api.deleteStudent,
-    onSuccess: () => {
-      toast.success("Student deleted.");
-      void qc.invalidateQueries({ queryKey: ["students"] });
-      void qc.invalidateQueries({ queryKey: queryKeys.adminDashboard });
+    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) =>
+      api.updateStudent(id, payload),
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Student updated");
     },
-    onError: onMutError,
-  });
-}
-
-/* ─── Subjects ───────────────────────────────────────────── */
-
-export function useSubjects(params?: ListParams) {
-  return useQuery({
-    queryKey: queryKeys.subjects(params),
-    queryFn: () => api.fetchSubjects(params),
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
 
 export function useCreateSubject() {
-  const qc = useQueryClient();
+  const invalidate = useInvalidate();
   return useMutation({
     mutationFn: api.createSubject,
-    onSuccess: () => {
-      toast.success("Subject created.");
-      void qc.invalidateQueries({ queryKey: ["subjects"] });
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Subject created");
     },
-    onError: onMutError,
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
 
-export function useDeleteSubject() {
-  const qc = useQueryClient();
+export function useCreateGuardian() {
+  const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: api.deleteSubject,
-    onSuccess: () => {
-      toast.success("Subject deleted.");
-      void qc.invalidateQueries({ queryKey: ["subjects"] });
+    mutationFn: api.createGuardian,
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Guardian created");
     },
-    onError: onMutError,
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
 
-/* ─── Study logs ─────────────────────────────────────────── */
-
-export function useStudyLogs(params?: ListParams) {
-  return useQuery({
-    queryKey: queryKeys.studyLogs(params),
-    queryFn: () => api.fetchStudyLogs(params),
-  });
-}
-
-export function useStudyStats(studentId?: string) {
-  return useQuery({
-    queryKey: queryKeys.studyStats(studentId),
-    queryFn: () => api.fetchStudyStats(studentId),
-  });
-}
-
-export function useStudyTrend(params?: ListParams) {
-  return useQuery({
-    queryKey: queryKeys.studyTrend(params),
-    queryFn: () => api.fetchStudyTrend(params),
-  });
-}
-
-export function useStudyCalendar(params: {
-  year: number;
-  month: number;
-  studentId?: string;
-}) {
-  return useQuery({
-    queryKey: queryKeys.calendar(params.year, params.month, params.studentId),
-    queryFn: () => api.fetchCalendar(params),
-  });
-}
-
-export function useUpsertStudyLog() {
-  const qc = useQueryClient();
+export function useLinkGuardian() {
+  const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: api.upsertStudyLog,
-    onSuccess: () => {
-      toast.success("Study progress saved successfully.");
-      void qc.invalidateQueries({ queryKey: ["study-logs"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    mutationFn: api.linkGuardian,
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Guardian linked");
     },
-    onError: onMutError,
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
 
-export function useDeleteStudyLog() {
-  const qc = useQueryClient();
+export function useCreateHomework() {
+  const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: api.deleteStudyLog,
-    onSuccess: () => {
-      toast.success("Study log deleted.");
-      void qc.invalidateQueries({ queryKey: ["study-logs"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    mutationFn: api.createHomework,
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Homework assigned");
     },
-    onError: onMutError,
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
 
-/* ─── Scores ─────────────────────────────────────────────── */
-
-export function useScores(params?: ListParams) {
-  return useQuery({
-    queryKey: queryKeys.scores(params),
-    queryFn: () => api.fetchScores(params),
-  });
-}
-
-export function useScoreStats(params?: ListParams) {
-  return useQuery({
-    queryKey: queryKeys.scoreStats(params),
-    queryFn: () => api.fetchScoreStats(params),
-  });
-}
-
-export function useSaveScore() {
-  const qc = useQueryClient();
+export function useUpdateHomework() {
+  const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: ({
-      id,
-      values,
-    }: {
-      id?: string | null;
-      values: Record<string, unknown>;
-    }) => (id ? api.updateScore(id, values) : api.createScore(values)),
-    onSuccess: (_data, vars) => {
-      toast.success(
-        vars.id ? "Score updated successfully." : "Score added successfully.",
-      );
-      void qc.invalidateQueries({ queryKey: ["scores"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    mutationFn: ({ id, payload }: { id: string; payload: Record<string, unknown> }) =>
+      api.updateHomework(id, payload),
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Homework updated");
     },
-    onError: onMutError,
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
 
-export function useDeleteScore() {
-  const qc = useQueryClient();
+export function useCreateEvaluation() {
+  const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: api.deleteScore,
-    onSuccess: () => {
-      toast.success("Score deleted.");
-      void qc.invalidateQueries({ queryKey: ["scores"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    mutationFn: api.createEvaluation,
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Evaluation saved");
     },
-    onError: onMutError,
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }
 
-/* ─── Notes ──────────────────────────────────────────────── */
-
-export function useNotes(params?: ListParams) {
-  return useQuery({
-    queryKey: queryKeys.notes(params),
-    queryFn: () => api.fetchNotes(params),
-  });
-}
-
-export function useUploadNote() {
-  const qc = useQueryClient();
+export function useCreateComment() {
+  const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: api.uploadNote,
-    onSuccess: () => {
-      toast.success("Note uploaded successfully.");
-      void qc.invalidateQueries({ queryKey: ["notes"] });
+    mutationFn: api.createComment,
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Comment sent");
     },
-    onError: onMutError,
-  });
-}
-
-export function useDeleteNote() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: api.deleteNote,
-    onSuccess: () => {
-      toast.success("Note deleted.");
-      void qc.invalidateQueries({ queryKey: ["notes"] });
-    },
-    onError: onMutError,
-  });
-}
-
-/* ─── Goals ──────────────────────────────────────────────── */
-
-export function useGoals(params?: ListParams) {
-  return useQuery({
-    queryKey: queryKeys.goals(params),
-    queryFn: () => api.fetchGoals(params),
-  });
-}
-
-export function useCreateGoal() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: api.createGoal,
-    onSuccess: () => {
-      toast.success("Goal created.");
-      void qc.invalidateQueries({ queryKey: ["goals"] });
-    },
-    onError: onMutError,
-  });
-}
-
-export function useUpdateGoal() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: string;
-      payload: Record<string, unknown>;
-    }) => api.updateGoal(id, payload),
-    onSuccess: () => {
-      toast.success("Goal updated.");
-      void qc.invalidateQueries({ queryKey: ["goals"] });
-    },
-    onError: onMutError,
-  });
-}
-
-export function useDeleteGoal() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: api.deleteGoal,
-    onSuccess: () => {
-      toast.success("Goal deleted.");
-      void qc.invalidateQueries({ queryKey: ["goals"] });
-    },
-    onError: onMutError,
-  });
-}
-
-/* ─── Reports ────────────────────────────────────────────── */
-
-export function useReport(params?: ListParams) {
-  return useQuery({
-    queryKey: queryKeys.reports(params),
-    queryFn: () => api.fetchReport(params),
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 }

@@ -1,17 +1,15 @@
 import { api, type ApiSuccess } from "@/lib/api";
 import type {
-  Activity,
-  Goal,
-  Note,
-  Score,
-  StudentProfile,
-  StudyLog,
+  GuardianComment,
+  HomeworkAssignment,
+  LessonEvaluation,
+  Student,
   Subject,
 } from "@/types";
 
-export async function fetchAdminDashboard() {
+export async function fetchTeacherDashboard() {
   const { data } = await api.get<ApiSuccess<Record<string, unknown>>>(
-    "/dashboard/admin",
+    "/dashboard/teacher",
   );
   return data.data;
 }
@@ -24,41 +22,37 @@ export async function fetchStudentDashboard(studentId?: string) {
   return data.data;
 }
 
+export async function fetchGuardianDashboard(studentId?: string) {
+  const { data } = await api.get<ApiSuccess<Record<string, unknown>>>(
+    "/dashboard/guardian",
+    { params: studentId ? { studentId } : undefined },
+  );
+  return data.data;
+}
+
 export async function fetchStudents(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<StudentProfile[]>>("/students", {
-    params,
-  });
+  const { data } = await api.get<ApiSuccess<Student[]>>("/students", { params });
   return { items: data.data, meta: data.meta };
 }
 
 export async function fetchStudent(id: string) {
-  const { data } = await api.get<ApiSuccess<StudentProfile>>(`/students/${id}`);
-  return data.data;
-}
-
-export async function fetchMyProfile() {
-  const { data } = await api.get<ApiSuccess<StudentProfile>>("/students/me/profile");
+  const { data } = await api.get<ApiSuccess<Student>>(`/students/${id}`);
   return data.data;
 }
 
 export async function createStudent(payload: Record<string, unknown>) {
-  const { data } = await api.post<ApiSuccess<unknown>>("/students", payload);
+  const { data } = await api.post<ApiSuccess<Student>>("/students", payload);
   return data.data;
 }
 
 export async function updateStudent(id: string, payload: Record<string, unknown>) {
-  const { data } = await api.put<ApiSuccess<unknown>>(`/students/${id}`, payload);
+  const { data } = await api.put<ApiSuccess<Student>>(`/students/${id}`, payload);
   return data.data;
 }
 
-export async function deleteStudent(id: string) {
-  const { data } = await api.delete<ApiSuccess<{ id: string }>>(`/students/${id}`);
+export async function fetchSubjects() {
+  const { data } = await api.get<ApiSuccess<Subject[]>>("/subjects");
   return data.data;
-}
-
-export async function fetchSubjects(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<Subject[]>>("/subjects", { params });
-  return { items: data.data, meta: data.meta };
 }
 
 export async function createSubject(payload: Record<string, unknown>) {
@@ -66,170 +60,102 @@ export async function createSubject(payload: Record<string, unknown>) {
   return data.data;
 }
 
-export async function updateSubject(id: string, payload: Record<string, unknown>) {
-  const { data } = await api.put<ApiSuccess<Subject>>(`/subjects/${id}`, payload);
-  return data.data;
-}
-
-export async function deleteSubject(id: string) {
-  const { data } = await api.delete<ApiSuccess<{ id: string }>>(`/subjects/${id}`);
-  return data.data;
-}
-
-export async function fetchStudyLogs(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<StudyLog[]>>("/study-logs", { params });
+export async function fetchGuardians(params?: Record<string, unknown>) {
+  const { data } = await api.get<ApiSuccess<unknown[]>>("/guardians", { params });
   return { items: data.data, meta: data.meta };
 }
 
-export async function upsertStudyLog(payload: Record<string, unknown>) {
-  const { data } = await api.post<ApiSuccess<StudyLog>>("/study-logs", payload);
+export async function createGuardian(payload: Record<string, unknown>) {
+  const { data } = await api.post<ApiSuccess<unknown>>("/guardians", payload);
   return data.data;
 }
 
-export async function updateStudyLog(id: string, payload: Record<string, unknown>) {
-  const { data } = await api.put<ApiSuccess<StudyLog>>(`/study-logs/${id}`, payload);
+export async function linkGuardian(payload: Record<string, unknown>) {
+  const { data } = await api.post<ApiSuccess<unknown>>("/guardians/link", payload);
   return data.data;
 }
 
-export async function deleteStudyLog(id: string) {
-  const { data } = await api.delete<ApiSuccess<{ id: string }>>(`/study-logs/${id}`);
-  return data.data;
-}
-
-export async function fetchStudyStats(studentId?: string) {
-  const { data } = await api.get<ApiSuccess<Record<string, unknown>>>(
-    "/study-logs/stats",
-    { params: studentId ? { studentId } : undefined },
-  );
-  return data.data;
-}
-
-export async function fetchStudyTrend(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<Array<{ date: string; hours: number }>>>(
-    "/study-logs/trend",
-    { params },
-  );
-  return data.data;
-}
-
-export async function fetchCalendar(params: {
-  studentId?: string;
-  year: number;
-  month: number;
-}) {
-  const { data } = await api.get<
-    ApiSuccess<
-      Array<{
-        date: string;
-        totalMinutes: number;
-        studyHours: number;
-        studyMinutes: number;
-        description?: string | null;
-        id: string;
-      }>
-    >
-  >("/study-logs/calendar", { params });
-  return data.data;
-}
-
-export async function fetchScores(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<Score[]>>("/scores", { params });
-  return { items: data.data, meta: data.meta };
-}
-
-export async function createScore(payload: Record<string, unknown>) {
-  const { data } = await api.post<ApiSuccess<Score>>("/scores", payload);
-  return data.data;
-}
-
-export async function updateScore(id: string, payload: Record<string, unknown>) {
-  const { data } = await api.put<ApiSuccess<Score>>(`/scores/${id}`, payload);
-  return data.data;
-}
-
-export async function deleteScore(id: string) {
-  const { data } = await api.delete<ApiSuccess<{ id: string }>>(`/scores/${id}`);
-  return data.data;
-}
-
-export async function fetchScoreStats(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<Record<string, unknown>>>(
-    "/scores/stats",
-    { params },
-  );
-  return data.data;
-}
-
-export async function fetchNotes(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<Note[]>>("/notes", { params });
-  return { items: data.data, meta: data.meta };
-}
-
-export async function uploadNote(formData: FormData) {
-  const { data } = await api.post<ApiSuccess<Note>>("/notes", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return data.data;
-}
-
-export async function deleteNote(id: string) {
-  const { data } = await api.delete<ApiSuccess<{ id: string }>>(`/notes/${id}`);
-  return data.data;
-}
-
-export async function downloadNote(id: string, fileName: string) {
-  const res = await api.get(`/notes/${id}/download`, { responseType: "blob" });
-  const url = window.URL.createObjectURL(new Blob([res.data]));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  window.URL.revokeObjectURL(url);
-}
-
-export async function fetchGoals(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<Goal[]>>("/goals", { params });
-  return { items: data.data, meta: data.meta };
-}
-
-export async function createGoal(payload: Record<string, unknown>) {
-  const { data } = await api.post<ApiSuccess<Goal>>("/goals", payload);
-  return data.data;
-}
-
-export async function updateGoal(id: string, payload: Record<string, unknown>) {
-  const { data } = await api.put<ApiSuccess<Goal>>(`/goals/${id}`, payload);
-  return data.data;
-}
-
-export async function deleteGoal(id: string) {
-  const { data } = await api.delete<ApiSuccess<{ id: string }>>(`/goals/${id}`);
-  return data.data;
-}
-
-export async function fetchActivities(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<Activity[]>>("/activities", {
+export async function fetchHomework(params?: Record<string, unknown>) {
+  const { data } = await api.get<ApiSuccess<HomeworkAssignment[]>>("/homework", {
     params,
   });
   return { items: data.data, meta: data.meta };
 }
 
-export async function fetchReport(params?: Record<string, unknown>) {
-  const { data } = await api.get<ApiSuccess<Record<string, unknown>>>("/reports", {
+export async function createHomework(payload: Record<string, unknown>) {
+  const { data } = await api.post<ApiSuccess<HomeworkAssignment>>(
+    "/homework",
+    payload,
+  );
+  return data.data;
+}
+
+export async function updateHomework(id: string, payload: Record<string, unknown>) {
+  const { data } = await api.put<ApiSuccess<HomeworkAssignment>>(
+    `/homework/${id}`,
+    payload,
+  );
+  return data.data;
+}
+
+export async function fetchEvaluations(params?: Record<string, unknown>) {
+  const { data } = await api.get<ApiSuccess<LessonEvaluation[]>>("/evaluations", {
+    params,
+  });
+  return { items: data.data, meta: data.meta };
+}
+
+export async function createEvaluation(payload: Record<string, unknown>) {
+  const { data } = await api.post<ApiSuccess<LessonEvaluation>>(
+    "/evaluations",
+    payload,
+  );
+  return data.data;
+}
+
+export async function updateEvaluation(
+  id: string,
+  payload: Record<string, unknown>,
+) {
+  const { data } = await api.put<ApiSuccess<LessonEvaluation>>(
+    `/evaluations/${id}`,
+    payload,
+  );
+  return data.data;
+}
+
+export async function fetchHistory(params: Record<string, unknown>) {
+  const { data } = await api.get<ApiSuccess<LessonEvaluation[]>>("/history", {
+    params,
+  });
+  return { items: data.data, meta: data.meta };
+}
+
+export async function fetchProgress(params: Record<string, unknown>) {
+  const { data } = await api.get<ApiSuccess<Record<string, unknown>>>("/progress", {
     params,
   });
   return data.data;
 }
 
-export async function exportReportCsv(params?: Record<string, unknown>) {
-  const res = await api.get("/reports/export.csv", {
+export async function fetchComments(params: Record<string, unknown>) {
+  const { data } = await api.get<ApiSuccess<GuardianComment[]>>("/comments", {
     params,
-    responseType: "blob",
   });
-  const url = window.URL.createObjectURL(new Blob([res.data]));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "edutrack-report.csv";
-  a.click();
-  window.URL.revokeObjectURL(url);
+  return { items: data.data, meta: data.meta };
+}
+
+export async function fetchUnansweredComments() {
+  const { data } = await api.get<ApiSuccess<GuardianComment[]>>(
+    "/comments/unanswered",
+  );
+  return data.data;
+}
+
+export async function createComment(payload: Record<string, unknown>) {
+  const { data } = await api.post<ApiSuccess<GuardianComment>>(
+    "/comments",
+    payload,
+  );
+  return data.data;
 }

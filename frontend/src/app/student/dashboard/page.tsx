@@ -1,152 +1,98 @@
 "use client";
 
+import { useSession } from "next-auth/react";
+import { PageHeader } from "@/components/ui/page-header";
 import { useStudentDashboard } from "@/hooks/use-server-state";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/empty-state";
-import {
-  StudyHoursChart,
-  ScoreTrendChart,
-  SubjectBarChart,
-} from "@/components/charts/charts";
-import { formatDuration, formatPercent } from "@/lib/utils";
+import { formatDate, formatMarks } from "@/lib/format";
 
 export default function StudentDashboardPage() {
-  const { data, isLoading, error } = useStudentDashboard();
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-40" />
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <p className="text-sm text-red-600">Failed to load your dashboard.</p>
-    );
-  }
-
-  const studyStats = data.studyStats as {
-    todayMinutes: number;
-    todayFormatted: string;
-    weeklyFormatted: string;
-    monthlyFormatted: string;
-    currentStreak: number;
-  };
-  const scoreStats = data.scoreStats as {
-    overallAverage: number | null;
-    highestScore: number | null;
-    numberOfTests: number;
-    bySubject: Array<{ subjectName: string; average: number }>;
-    progression: Array<{ date: string; percentage: number }>;
-  };
-  const studyTrend = data.studyTrend as Array<{ date: string; hours: number }>;
-  const todayProgressPct = data.todayProgressPct as number;
-  const todayTargetMinutes = data.todayTargetMinutes as number;
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">My Dashboard</h1>
-        <p className="text-sm text-slate-500">
-          Track today&apos;s study and academic progress
-        </p>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Today&apos;s Study</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-indigo-700">
-              {studyStats.todayFormatted}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Target: {formatDuration(todayTargetMinutes)}
-            </p>
-            <Progress value={todayProgressPct} className="mt-4" />
-            <p className="mt-2 text-xs text-slate-400">
-              {todayProgressPct}% of daily target · Streak {studyStats.currentStreak} days
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Score Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-3">
-            <Stat label="Average" value={formatPercent(scoreStats.overallAverage)} />
-            <Stat label="Highest" value={formatPercent(scoreStats.highestScore)} />
-            <Stat label="Tests" value={String(scoreStats.numberOfTests)} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Study Totals</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="This week" value={studyStats.weeklyFormatted} />
-            <Row label="This month" value={studyStats.monthlyFormatted} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Daily Study Hours</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <StudyHoursChart data={studyTrend} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Score Progression</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScoreTrendChart
-              data={scoreStats.progression.map((p) => ({
-                date: p.date,
-                average: p.percentage,
-              }))}
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Subject-wise Scores</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SubjectBarChart data={scoreStats.bySubject ?? []} />
-        </CardContent>
-      </Card>
-    </div>
+  const { data: session } = useSession();
+  const { data, isLoading } = useStudentDashboard(
+    session?.user?.studentId ?? undefined,
   );
-}
 
-function Stat({ label, value }: { label: string; value: string }) {
+  if (isLoading) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (!data) return <p className="text-sm text-red-600">Unable to load dashboard.</p>;
+
+  const student = data.student as { fullName?: string; className?: string } | null;
+  const todayHomework = (data.todayHomework as Array<Record<string, unknown>>) ?? [];
+  const upcoming = (data.upcoming as Array<Record<string, unknown>>) ?? [];
+  const todayEvals = (data.todayEvals as Array<Record<string, unknown>>) ?? [];
+  const progress = data.progress as {
+    overall?: { percentage: number | null; evaluationCount: number };
+    subjects?: Array<{ subjectName: string; percentage: number | null }>;
+  };
+
   return (
     <div>
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="text-lg font-semibold text-slate-900">{value}</p>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between border-b border-slate-100 py-2">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-medium text-slate-800">{value}</span>
+      <PageHeader
+        title={`Hello, ${student?.fullName ?? "Student"}`}
+        description={`${student?.className ?? ""} · Read-only academic view`}
+      />
+      <div className="mb-4 rounded-xl border bg-white p-4 text-sm">
+        Overall weighted percentage:{" "}
+        <strong>
+          {progress?.overall?.percentage == null
+            ? "No recorded marks yet"
+            : `${progress.overall.percentage}% (${progress.overall.evaluationCount} evaluations)`}
+        </strong>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-xl border bg-white p-4">
+          <h2 className="font-semibold">Today&apos;s homework</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            {todayHomework.length === 0 ? (
+              <li className="text-slate-500">No homework assigned today.</li>
+            ) : (
+              todayHomework.map((h) => (
+                <li key={String(h.id)}>
+                  {(h.subject as { name?: string })?.name}: {String(h.title)}
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+        <section className="rounded-xl border bg-white p-4">
+          <h2 className="font-semibold">Upcoming due dates</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            {upcoming.length === 0 ? (
+              <li className="text-slate-500">No upcoming deadlines.</li>
+            ) : (
+              upcoming.map((h) => (
+                <li key={String(h.id)} className="flex justify-between gap-2">
+                  <span>{String(h.title)}</span>
+                  <span className="text-slate-500">
+                    {formatDate(h.dueDate as string)}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+        <section className="rounded-xl border bg-white p-4 lg:col-span-2">
+          <h2 className="font-semibold">Today&apos;s evaluations</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            {todayEvals.length === 0 ? (
+              <li className="text-slate-500">No evaluations recorded today.</li>
+            ) : (
+              todayEvals.map((e) => (
+                <li key={String(e.id)} className="flex justify-between gap-2">
+                  <span>
+                    {(e.subject as { name?: string })?.name} —{" "}
+                    {String(e.lessonOrChapter)}
+                  </span>
+                  <span>
+                    {formatMarks(
+                      e.marksObtained as number | null,
+                      e.maximumMarks as number | null,
+                    )}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+      </div>
     </div>
   );
 }

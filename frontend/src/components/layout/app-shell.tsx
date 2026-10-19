@@ -7,59 +7,69 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  Clock,
+  ClipboardList,
   BarChart3,
-  FileText,
-  Target,
+  MessageSquare,
   Settings,
   Menu,
   X,
   LogOut,
   GraduationCap,
-  LineChart,
-  Calendar,
-  User,
+  History,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/stores/uiStore";
 import { Button } from "@/components/ui/button";
 
-const adminNav = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/students", label: "Students", icon: Users },
-  { href: "/admin/subjects", label: "Subjects", icon: BookOpen },
-  { href: "/admin/study-progress", label: "Study Progress", icon: Clock },
-  { href: "/admin/scores", label: "Scores", icon: BarChart3 },
-  { href: "/admin/notes", label: "Notes", icon: FileText },
-  { href: "/admin/goals", label: "Goals", icon: Target },
-  { href: "/admin/reports", label: "Reports", icon: LineChart },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+const teacherNav = [
+  { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/teacher/students", label: "Students", icon: Users },
+  { href: "/teacher/subjects", label: "Subjects", icon: BookOpen },
+  { href: "/teacher/homework", label: "Homework", icon: ClipboardList },
+  { href: "/teacher/evaluations", label: "Evaluations", icon: BarChart3 },
+  { href: "/teacher/progress", label: "Progress", icon: History },
+  { href: "/teacher/guardians", label: "Guardians", icon: UserCircle },
+  { href: "/teacher/comments", label: "Comments", icon: MessageSquare },
+  { href: "/teacher/settings", label: "Settings", icon: Settings },
 ];
 
 const studentNav = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/student/progress", label: "My Progress", icon: LineChart },
-  { href: "/student/study-log", label: "Study Log", icon: Clock },
-  { href: "/student/scores", label: "My Scores", icon: BarChart3 },
-  { href: "/student/subjects", label: "Subjects", icon: BookOpen },
-  { href: "/student/notes", label: "Notes", icon: FileText },
-  { href: "/student/goals", label: "Goals", icon: Target },
-  { href: "/student/calendar", label: "Calendar", icon: Calendar },
-  { href: "/student/profile", label: "Profile", icon: User },
-  { href: "/student/settings", label: "Settings", icon: Settings },
+  { href: "/student/homework", label: "Homework", icon: ClipboardList },
+  { href: "/student/progress", label: "Progress", icon: BarChart3 },
+  { href: "/student/history", label: "History", icon: History },
 ];
+
+const guardianNav = [
+  { href: "/guardian/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/guardian/children", label: "Children", icon: Users },
+  { href: "/guardian/homework", label: "Homework", icon: ClipboardList },
+  { href: "/guardian/comments", label: "Comments", icon: MessageSquare },
+];
+
+const labels = {
+  teacher: "Teacher Console",
+  student: "Student Portal",
+  guardian: "Guardian Portal",
+} as const;
 
 export function AppShell({
   children,
   variant,
 }: {
   children: React.ReactNode;
-  variant: "admin" | "student";
+  variant: "teacher" | "student" | "guardian";
 }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { sidebarOpen, setSidebarOpen, toggleSidebar } = useUiStore();
-  const nav = variant === "admin" ? adminNav : studentNav;
+  const nav =
+    variant === "teacher"
+      ? teacherNav
+      : variant === "student"
+        ? studentNav
+        : guardianNav;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -71,14 +81,12 @@ export function AppShell({
           )}
         >
           <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-700 text-white">
               <GraduationCap className="h-5 w-5" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">EduTrack</p>
-              <p className="text-xs text-slate-500">
-                {variant === "admin" ? "Teacher Console" : "Student Portal"}
-              </p>
+              <p className="text-xs text-slate-500">{labels[variant]}</p>
             </div>
             <button
               className="ml-auto rounded-md p-1 lg:hidden"
@@ -90,7 +98,8 @@ export function AppShell({
           </div>
           <nav className="space-y-1 p-3">
             {nav.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active =
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;
               return (
                 <Link
@@ -100,7 +109,7 @@ export function AppShell({
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "bg-indigo-50 text-indigo-700"
+                      ? "bg-teal-50 text-teal-800"
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                   )}
                 >

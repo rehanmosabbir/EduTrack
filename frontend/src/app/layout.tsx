@@ -3,8 +3,9 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "EduTrack — Academic Progress",
-  description: "Academic Student Progress Management System for Bangladesh",
+  title: "EduTrack — Coaching Management",
+  description:
+    "Private coaching student management, homework, evaluations, and guardian progress",
 };
 
 export default function RootLayout({
