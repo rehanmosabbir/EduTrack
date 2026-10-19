@@ -26,7 +26,7 @@ Postgres: `localhost:5433` (user/pass/db: `edutrack`).
 
 ### 2. Environment
 
-Copy [`.env.example`](.env.example) to `frontend/.env.local` and set at least:
+Copy [`.env.example`](.env.example) to `.env.local` and set at least:
 
 - `DATABASE_URL`
 - `NEXTAUTH_SECRET`
@@ -70,13 +70,12 @@ Pushing to `main` / `master` runs [.github/workflows/deploy.yml](.github/workflo
 
 ```bash
 npm install -g vercel
-cd frontend
 vercel login
 vercel link
 ```
 
-When prompted, set **Root Directory** to `frontend` (or link from repo root with that root directory).  
-Copy IDs from `frontend/.vercel/project.json`:
+Link from the repo root (Root Directory = `.`).  
+Copy IDs from `.vercel/project.json`:
 
 - `orgId` → `VERCEL_ORG_ID`
 - `projectId` → `VERCEL_PROJECT_ID`
@@ -115,8 +114,8 @@ If the GitHub repo is also connected in Vercel for automatic Git deploys, either
 ### 5. Production migrations (once / when schema changes)
 
 ```bash
-DATABASE_URL="..." npm run db:migrate:deploy -w frontend
-DATABASE_URL="..." npm run db:seed -w frontend   # optional demo data
+DATABASE_URL="..." npm run db:migrate:deploy
+DATABASE_URL="..." npm run db:seed   # optional demo data
 ```
 
 After secrets are set, every push to `main` deploys. You can also run the workflow manually via **Actions → CI and Deploy → Run workflow**.
@@ -124,11 +123,10 @@ After secrets are set, every push to `main` deploys. You can also run the workfl
 ## Project layout
 
 ```text
-frontend/
-  prisma/                 # schema, migrations, seed
-  src/app/api/            # Next.js API routes
-  src/app/teacher|student|guardian/
-  src/server/             # services, auth, validators
+prisma/                 # schema, migrations, seed
+src/app/api/            # Next.js API routes
+src/app/teacher|student|guardian/
+src/server/             # services, auth, validators
 ```
 
 ## Core features

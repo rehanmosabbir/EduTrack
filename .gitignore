@@ -32,16 +32,16 @@ Thumbs.db
 *.swo
 
 # Uploads / storage
-frontend/uploads/*
-!frontend/uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
 
 # Testing
 coverage/
 .nyc_output/
 
 # Prisma
-frontend/prisma/*.db
-frontend/prisma/*.db-journal
+prisma/*.db
+prisma/*.db-journal
 
 # Vercel
 .vercel/
