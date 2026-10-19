@@ -8,7 +8,8 @@ export function serializeEvaluation<T extends LessonEvaluation>(
   viewerRole: RoleType,
 ) {
   if (viewerRole === ROLES.TEACHER) return evaluation;
-  const { privateTeacherNotes: _, ...rest } = evaluation;
+  const { privateTeacherNotes, ...rest } = evaluation;
+  void privateTeacherNotes;
   return rest;
 }
 

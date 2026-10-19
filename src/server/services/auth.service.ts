@@ -82,7 +82,8 @@ export async function getMe(userId: string) {
     },
   });
   if (!user) throw Errors.notFound("User not found");
-  const { passwordHash: _, ...safe } = user;
+  const { passwordHash, ...safe } = user;
+  void passwordHash;
   return safe;
 }
 

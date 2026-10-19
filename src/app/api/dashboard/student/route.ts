@@ -16,13 +16,15 @@ export const GET = withApi(async (req) => {
   // Strip private notes from evaluations in nested payloads
   if (user.role !== ROLES.TEACHER && data.todayEvals) {
     data.todayEvals = data.todayEvals.map((e) => {
-      const { privateTeacherNotes: _, ...rest } = e;
+      const { privateTeacherNotes, ...rest } = e;
+      void privateTeacherNotes;
       return rest;
     }) as typeof data.todayEvals;
   }
   if (user.role !== ROLES.TEACHER && data.recentFeedback) {
     data.recentFeedback = data.recentFeedback.map((e) => {
-      const { privateTeacherNotes: _, ...rest } = e;
+      const { privateTeacherNotes, ...rest } = e;
+      void privateTeacherNotes;
       return rest;
     }) as typeof data.recentFeedback;
   }

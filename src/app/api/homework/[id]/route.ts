@@ -14,7 +14,8 @@ export const GET = withApi(async (req, ctx: Ctx) => {
   await assertCanAccessStudent(user, hw.studentId);
   // Hide teacher-only notes from non-teachers
   if (user.role !== ROLES.TEACHER) {
-    const { teacherNotes: _, ...rest } = hw;
+    const { teacherNotes, ...rest } = hw;
+    void teacherNotes;
     return jsonSuccess(rest);
   }
   return jsonSuccess(hw);

@@ -50,12 +50,12 @@ export function handleApiError(err: unknown) {
   return jsonError("Internal server error", 500, "INTERNAL_ERROR");
 }
 
-export function withApi(
-  handler: (req: Request, context?: any) => Promise<Response> | Response,
+export function withApi<C>(
+  handler: (req: Request, context: C) => Promise<Response> | Response,
 ): (req: Request) => Promise<Response> {
-  return async (req: Request, context?: any) => {
+  return async (req: Request, context?: C) => {
     try {
-      return await handler(req, context);
+      return await handler(req, context as C);
     } catch (err) {
       return handleApiError(err);
     }
