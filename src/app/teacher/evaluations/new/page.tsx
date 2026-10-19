@@ -13,16 +13,19 @@ import {
   useStudents,
   useSubjects,
 } from "@/hooks/use-server-state";
+import { getErrorMessage } from "@/lib/api";
 import { todayISO } from "@/lib/format";
 import {
   CLASS_OPTIONS,
   DEFAULT_CLASS,
-  filterSubjectsForClass,
+  getSubjectsForClass,
 } from "@/lib/curriculum";
+import { resolveSubjectIds } from "@/lib/resolve-subjects";
+import { toast } from "sonner";
 
 const emptyForm = (studentId = "") => ({
   studentId,
-  subjectId: "",
+  subjectName: "",
   homeworkAssignmentId: "",
   evaluationDate: todayISO(),
   lessonOrChapter: "",
@@ -37,11 +40,12 @@ const emptyForm = (studentId = "") => ({
 function NewEvaluationPageInner() {
   const params = useSearchParams();
   const { data: students } = useStudents({ status: "ACTIVE", limit: 100 });
-  const { data: subjects } = useSubjects();
+  const { data: subjects, refetch: refetchSubjects } = useSubjects();
   const create = useCreateEvaluation();
   const [className, setClassName] = useState<string>(DEFAULT_CLASS);
   const [form, setForm] = useState(emptyForm(params.get("studentId") ?? ""));
   const [savedCount, setSavedCount] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   const { data: homework } = useHomework({
     studentId: form.studentId || undefined,
@@ -54,9 +58,9 @@ function NewEvaluationPageInner() {
     return items.filter((s) => s.className === className);
   }, [students, className]);
 
-  const classSubjects = useMemo(
-    () => filterSubjectsForClass(subjects ?? [], className),
-    [subjects, className],
+  const curriculumSubjects = useMemo(
+    () => getSubjectsForClass(className),
+    [className],
   );
 
   useEffect(() => {
@@ -69,15 +73,17 @@ function NewEvaluationPageInner() {
 
   function onClassChange(nextClass: string) {
     setClassName(nextClass);
-    const allowed = filterSubjectsForClass(subjects ?? [], nextClass);
-    const subjectStillValid = allowed.some((s) => s.id === form.subjectId);
+    const allowed = new Set(
+      getSubjectsForClass(nextClass).map((n) => n.toLowerCase()),
+    );
+    const subjectStillValid = allowed.has(form.subjectName.toLowerCase());
     const studentStillValid = (students?.items ?? []).some(
       (s) => s.id === form.studentId && s.className === nextClass,
     );
     setForm({
       ...form,
       studentId: studentStillValid ? form.studentId : "",
-      subjectId: subjectStillValid ? form.subjectId : "",
+      subjectName: subjectStillValid ? form.subjectName : "",
       homeworkAssignmentId: studentStillValid ? form.homeworkAssignmentId : "",
     });
   }
@@ -86,12 +92,14 @@ function NewEvaluationPageInner() {
     const student = (students?.items ?? []).find((s) => s.id === studentId);
     if (student && student.className !== className) {
       setClassName(student.className);
-      const allowed = filterSubjectsForClass(subjects ?? [], student.className);
-      const subjectStillValid = allowed.some((s) => s.id === form.subjectId);
+      const allowed = new Set(
+        getSubjectsForClass(student.className).map((n) => n.toLowerCase()),
+      );
+      const subjectStillValid = allowed.has(form.subjectName.toLowerCase());
       setForm({
         ...form,
         studentId,
-        subjectId: subjectStillValid ? form.subjectId : "",
+        subjectName: subjectStillValid ? form.subjectName : "",
         homeworkAssignmentId: "",
       });
       return;
@@ -101,33 +109,45 @@ function NewEvaluationPageInner() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const clientRequestId =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random()}`;
+    setSaving(true);
+    try {
+      const clientRequestId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`;
 
-    const hasMarks = form.marksObtained !== "" || form.maximumMarks !== "";
-    await create.mutateAsync({
-      studentId: form.studentId,
-      subjectId: form.subjectId,
-      homeworkAssignmentId: form.homeworkAssignmentId || null,
-      evaluationDate: form.evaluationDate,
-      lessonOrChapter: form.lessonOrChapter,
-      preparationStatus: form.preparationStatus,
-      homeworkStatus: form.homeworkStatus,
-      marksObtained: hasMarks ? Number(form.marksObtained || 0) : null,
-      maximumMarks: hasMarks ? Number(form.maximumMarks) : null,
-      teacherFeedback: form.teacherFeedback || null,
-      privateTeacherNotes: form.privateTeacherNotes || null,
-      clientRequestId,
-    });
-    setSavedCount((n) => n + 1);
-    // Keep page open for successive students; clear student-specific fields
-    setForm((prev) => ({
-      ...emptyForm(""),
-      evaluationDate: prev.evaluationDate,
-      subjectId: prev.subjectId,
-    }));
+      const [subjectId] = await resolveSubjectIds(
+        [form.subjectName],
+        subjects ?? [],
+        () => refetchSubjects(),
+      );
+
+      const hasMarks = form.marksObtained !== "" || form.maximumMarks !== "";
+      await create.mutateAsync({
+        studentId: form.studentId,
+        subjectId,
+        homeworkAssignmentId: form.homeworkAssignmentId || null,
+        evaluationDate: form.evaluationDate,
+        lessonOrChapter: form.lessonOrChapter,
+        preparationStatus: form.preparationStatus,
+        homeworkStatus: form.homeworkStatus,
+        marksObtained: hasMarks ? Number(form.marksObtained || 0) : null,
+        maximumMarks: hasMarks ? Number(form.maximumMarks) : null,
+        teacherFeedback: form.teacherFeedback || null,
+        privateTeacherNotes: form.privateTeacherNotes || null,
+        clientRequestId,
+      });
+      setSavedCount((n) => n + 1);
+      setForm((prev) => ({
+        ...emptyForm(""),
+        evaluationDate: prev.evaluationDate,
+        subjectName: prev.subjectName,
+      }));
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -183,13 +203,15 @@ function NewEvaluationPageInner() {
             <select
               required
               className="mt-1 w-full cursor-pointer rounded-md border px-3 py-2 text-sm"
-              value={form.subjectId}
-              onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
+              value={form.subjectName}
+              onChange={(e) =>
+                setForm({ ...form, subjectName: e.target.value })
+              }
             >
               <option value="">Select subject</option>
-              {classSubjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
+              {curriculumSubjects.map((name) => (
+                <option key={name} value={name}>
+                  {name}
                 </option>
               ))}
             </select>
@@ -307,7 +329,7 @@ function NewEvaluationPageInner() {
             }
           />
         </div>
-        <Button type="submit" disabled={create.isPending}>
+        <Button type="submit" disabled={saving || create.isPending}>
           Save & continue
         </Button>
       </form>

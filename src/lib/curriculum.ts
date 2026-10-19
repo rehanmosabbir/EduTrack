@@ -114,3 +114,11 @@ export function filterSubjectsForClass<T extends { name: string }>(
   );
   return subjects.filter((s) => allowed.has(s.name.toLowerCase()));
 }
+
+/** Find an existing subject id by curriculum name (case-insensitive). */
+export function findSubjectIdByName(
+  subjects: Array<{ id: string; name: string }>,
+  name: string,
+): string | undefined {
+  return subjects.find((s) => s.name.toLowerCase() === name.toLowerCase())?.id;
+}

@@ -11,7 +11,6 @@ import {
   useStudents,
   useSubjects,
 } from "@/hooks/use-server-state";
-import { createSubject } from "@/services/api";
 import { getErrorMessage } from "@/lib/api";
 import { todayISO } from "@/lib/format";
 import {
@@ -19,6 +18,7 @@ import {
   DEFAULT_CLASS,
   getSubjectsForClass,
 } from "@/lib/curriculum";
+import { resolveSubjectIds } from "@/lib/resolve-subjects";
 import { toast } from "sonner";
 
 const emptyForm = () => ({
@@ -55,38 +55,17 @@ export default function TeacherStudentsPage() {
     });
   }
 
-  async function resolveSubjectIds(names: string[]) {
-    const existing = subjects ?? [];
-    const ids: string[] = [];
-    let createdAny = false;
-
-    for (const name of names) {
-      const found = existing.find(
-        (s) => s.name.toLowerCase() === name.toLowerCase(),
-      );
-      if (found) {
-        ids.push(found.id);
-        continue;
-      }
-      const created = await createSubject({
-        name,
-        description: `Bangladeshi NCTB curriculum`,
-      });
-      ids.push(created.id);
-      createdAny = true;
-    }
-
-    if (createdAny) await refetchSubjects();
-    return ids;
-  }
-
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
       let subjectIds: string[];
       try {
-        subjectIds = await resolveSubjectIds(form.subjectNames);
+        subjectIds = await resolveSubjectIds(
+          form.subjectNames,
+          subjects ?? [],
+          () => refetchSubjects(),
+        );
       } catch (err) {
         toast.error(getErrorMessage(err));
         return;

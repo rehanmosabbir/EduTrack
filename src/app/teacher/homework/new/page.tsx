@@ -12,23 +12,27 @@ import {
   useStudents,
   useSubjects,
 } from "@/hooks/use-server-state";
+import { getErrorMessage } from "@/lib/api";
 import { todayISO } from "@/lib/format";
 import {
   CLASS_OPTIONS,
   DEFAULT_CLASS,
-  filterSubjectsForClass,
+  getSubjectsForClass,
 } from "@/lib/curriculum";
+import { resolveSubjectIds } from "@/lib/resolve-subjects";
+import { toast } from "sonner";
 
 function NewHomeworkPageInner() {
   const router = useRouter();
   const params = useSearchParams();
   const { data: students } = useStudents({ status: "ACTIVE", limit: 100 });
-  const { data: subjects } = useSubjects();
+  const { data: subjects, refetch: refetchSubjects } = useSubjects();
   const create = useCreateHomework();
   const [className, setClassName] = useState<string>(DEFAULT_CLASS);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     studentId: params.get("studentId") ?? "",
-    subjectId: "",
+    subjectName: "",
     title: "",
     lessonOrChapter: "",
     instructions: "",
@@ -42,9 +46,9 @@ function NewHomeworkPageInner() {
     return items.filter((s) => s.className === className);
   }, [students, className]);
 
-  const classSubjects = useMemo(
-    () => filterSubjectsForClass(subjects ?? [], className),
-    [subjects, className],
+  const curriculumSubjects = useMemo(
+    () => getSubjectsForClass(className),
+    [className],
   );
 
   useEffect(() => {
@@ -57,15 +61,17 @@ function NewHomeworkPageInner() {
 
   function onClassChange(nextClass: string) {
     setClassName(nextClass);
-    const allowed = filterSubjectsForClass(subjects ?? [], nextClass);
-    const subjectStillValid = allowed.some((s) => s.id === form.subjectId);
+    const allowed = new Set(
+      getSubjectsForClass(nextClass).map((n) => n.toLowerCase()),
+    );
+    const subjectStillValid = allowed.has(form.subjectName.toLowerCase());
     const studentStillValid = (students?.items ?? []).some(
       (s) => s.id === form.studentId && s.className === nextClass,
     );
     setForm({
       ...form,
       studentId: studentStillValid ? form.studentId : "",
-      subjectId: subjectStillValid ? form.subjectId : "",
+      subjectName: subjectStillValid ? form.subjectName : "",
     });
   }
 
@@ -73,16 +79,45 @@ function NewHomeworkPageInner() {
     const student = (students?.items ?? []).find((s) => s.id === studentId);
     if (student && student.className !== className) {
       setClassName(student.className);
-      const allowed = filterSubjectsForClass(subjects ?? [], student.className);
-      const subjectStillValid = allowed.some((s) => s.id === form.subjectId);
+      const allowed = new Set(
+        getSubjectsForClass(student.className).map((n) => n.toLowerCase()),
+      );
+      const subjectStillValid = allowed.has(form.subjectName.toLowerCase());
       setForm({
         ...form,
         studentId,
-        subjectId: subjectStillValid ? form.subjectId : "",
+        subjectName: subjectStillValid ? form.subjectName : "",
       });
       return;
     }
     setForm({ ...form, studentId });
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const [subjectId] = await resolveSubjectIds(
+        [form.subjectName],
+        subjects ?? [],
+        () => refetchSubjects(),
+      );
+      await create.mutateAsync({
+        studentId: form.studentId,
+        subjectId,
+        title: form.title,
+        lessonOrChapter: form.lessonOrChapter,
+        instructions: form.instructions,
+        assignedAt: form.assignedAt,
+        dueDate: form.dueDate || null,
+        maximumMarks: form.maximumMarks ? Number(form.maximumMarks) : null,
+      });
+      router.push("/teacher/homework");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -93,17 +128,7 @@ function NewHomeworkPageInner() {
       />
       <form
         className="grid max-w-2xl gap-3 rounded-xl border bg-white p-4"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          await create.mutateAsync({
-            ...form,
-            dueDate: form.dueDate || null,
-            maximumMarks: form.maximumMarks
-              ? Number(form.maximumMarks)
-              : null,
-          });
-          router.push("/teacher/homework");
-        }}
+        onSubmit={onSubmit}
       >
         <div>
           <Label htmlFor="homework-class">Class</Label>
@@ -142,13 +167,13 @@ function NewHomeworkPageInner() {
           <select
             required
             className="mt-1 w-full cursor-pointer rounded-md border px-3 py-2 text-sm"
-            value={form.subjectId}
-            onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
+            value={form.subjectName}
+            onChange={(e) => setForm({ ...form, subjectName: e.target.value })}
           >
             <option value="">Select subject</option>
-            {classSubjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
+            {curriculumSubjects.map((name) => (
+              <option key={name} value={name}>
+                {name}
               </option>
             ))}
           </select>
@@ -214,7 +239,7 @@ function NewHomeworkPageInner() {
             />
           </div>
         </div>
-        <Button type="submit" disabled={create.isPending}>
+        <Button type="submit" disabled={saving || create.isPending}>
           Assign homework
         </Button>
       </form>
