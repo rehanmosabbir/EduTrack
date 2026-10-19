@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,11 @@ import {
   useSubjects,
 } from "@/hooks/use-server-state";
 import { todayISO } from "@/lib/format";
+import {
+  CLASS_OPTIONS,
+  DEFAULT_CLASS,
+  filterSubjectsForClass,
+} from "@/lib/curriculum";
 
 function NewHomeworkPageInner() {
   const router = useRouter();
@@ -20,6 +25,7 @@ function NewHomeworkPageInner() {
   const { data: students } = useStudents({ status: "ACTIVE", limit: 100 });
   const { data: subjects } = useSubjects();
   const create = useCreateHomework();
+  const [className, setClassName] = useState<string>(DEFAULT_CLASS);
   const [form, setForm] = useState({
     studentId: params.get("studentId") ?? "",
     subjectId: "",
@@ -31,7 +37,53 @@ function NewHomeworkPageInner() {
     maximumMarks: "",
   });
 
-  const activeStudents = useMemo(() => students?.items ?? [], [students]);
+  const activeStudents = useMemo(() => {
+    const items = students?.items ?? [];
+    return items.filter((s) => s.className === className);
+  }, [students, className]);
+
+  const classSubjects = useMemo(
+    () => filterSubjectsForClass(subjects ?? [], className),
+    [subjects, className],
+  );
+
+  useEffect(() => {
+    if (!form.studentId || !students?.items) return;
+    const student = students.items.find((s) => s.id === form.studentId);
+    if (student && student.className !== className) {
+      setClassName(student.className);
+    }
+  }, [students, form.studentId, className]);
+
+  function onClassChange(nextClass: string) {
+    setClassName(nextClass);
+    const allowed = filterSubjectsForClass(subjects ?? [], nextClass);
+    const subjectStillValid = allowed.some((s) => s.id === form.subjectId);
+    const studentStillValid = (students?.items ?? []).some(
+      (s) => s.id === form.studentId && s.className === nextClass,
+    );
+    setForm({
+      ...form,
+      studentId: studentStillValid ? form.studentId : "",
+      subjectId: subjectStillValid ? form.subjectId : "",
+    });
+  }
+
+  function onStudentChange(studentId: string) {
+    const student = (students?.items ?? []).find((s) => s.id === studentId);
+    if (student && student.className !== className) {
+      setClassName(student.className);
+      const allowed = filterSubjectsForClass(subjects ?? [], student.className);
+      const subjectStillValid = allowed.some((s) => s.id === form.subjectId);
+      setForm({
+        ...form,
+        studentId,
+        subjectId: subjectStillValid ? form.subjectId : "",
+      });
+      return;
+    }
+    setForm({ ...form, studentId });
+  }
 
   return (
     <div>
@@ -54,12 +106,28 @@ function NewHomeworkPageInner() {
         }}
       >
         <div>
+          <Label htmlFor="homework-class">Class</Label>
+          <select
+            id="homework-class"
+            required
+            className="mt-1 w-full cursor-pointer rounded-md border px-3 py-2 text-sm"
+            value={className}
+            onChange={(e) => onClassChange(e.target.value)}
+          >
+            {CLASS_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
           <Label>Student</Label>
           <select
             required
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            className="mt-1 w-full cursor-pointer rounded-md border px-3 py-2 text-sm"
             value={form.studentId}
-            onChange={(e) => setForm({ ...form, studentId: e.target.value })}
+            onChange={(e) => onStudentChange(e.target.value)}
           >
             <option value="">Select student</option>
             {activeStudents.map((s) => (
@@ -73,12 +141,12 @@ function NewHomeworkPageInner() {
           <Label>Subject</Label>
           <select
             required
-            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            className="mt-1 w-full cursor-pointer rounded-md border px-3 py-2 text-sm"
             value={form.subjectId}
             onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
           >
             <option value="">Select subject</option>
-            {(subjects ?? []).map((s) => (
+            {classSubjects.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>

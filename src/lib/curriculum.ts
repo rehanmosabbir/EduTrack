@@ -103,3 +103,14 @@ export const ALL_CURRICULUM_SUBJECTS: string[] = Array.from(
     ...HIGHER_SECONDARY_SUBJECTS,
   ]),
 );
+
+/** Filter DB subjects to those that belong to the selected class curriculum. */
+export function filterSubjectsForClass<T extends { name: string }>(
+  subjects: T[],
+  className: string,
+): T[] {
+  const allowed = new Set(
+    getSubjectsForClass(className).map((n) => n.toLowerCase()),
+  );
+  return subjects.filter((s) => allowed.has(s.name.toLowerCase()));
+}
