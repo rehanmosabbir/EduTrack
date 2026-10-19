@@ -98,7 +98,7 @@ export async function createComment(
   }
 
   let guardianId: string | null = null;
-  let authorRole = user.role as Role;
+  const authorRole = user.role as Role;
 
   if (user.role === ROLES.GUARDIAN) {
     if (!user.guardianId) throw Errors.forbidden();
