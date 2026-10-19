@@ -50,15 +50,10 @@ export function handleApiError(err: unknown) {
   return jsonError("Internal server error", 500, "INTERNAL_ERROR");
 }
 
-type RouteContext = { params: Promise<Record<string, string>> };
-
-export function withApi<TContext extends RouteContext | undefined = undefined>(
-  handler: (
-    req: Request,
-    context: TContext,
-  ) => Promise<Response> | Response,
-) {
-  return async (req: Request, context: TContext) => {
+export function withApi(
+  handler: (req: Request, context?: any) => Promise<Response> | Response,
+): (req: Request) => Promise<Response> {
+  return async (req: Request, context?: any) => {
     try {
       return await handler(req, context);
     } catch (err) {
