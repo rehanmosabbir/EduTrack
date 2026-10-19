@@ -7,7 +7,7 @@ import { findSubjectIdByName } from "@/lib/curriculum";
 export async function resolveSubjectIds(
   names: string[],
   existing: Array<{ id: string; name: string }>,
-  onCreated?: () => void | Promise<void>,
+  onCreated?: () => unknown,
 ): Promise<string[]> {
   const ids: string[] = [];
   let createdAny = false;
